@@ -1,6 +1,7 @@
 import requests
 import random
 from config import OMDB_API_KEY, TMDB_API_KEY
+from ai_recommender import recommend as ai_recommend
 
 
 # ---------------------------
@@ -118,17 +119,53 @@ def get_similar_movies(title):
 
     return movies[:5]
 
+def enrich_movie(title):
+    url = "https://api.themoviedb.org/3/search/movie"
+
+    params = {
+        "api_key": TMDB_API_KEY,
+        "query": title
+    }
+
+    try:
+        res = requests.get(url, params=params, timeout=5).json()
+
+        if res.get("results"):
+            m = res["results"][0]
+
+            return {
+                "title": m["title"],
+                "rating": m["vote_average"],
+                "poster": f"https://image.tmdb.org/t/p/w500{m['poster_path']}"
+            }
+
+    except Exception as e:
+        print("ENRICH ERROR:", e)
+
+    return None
+
 
 # ---------------------------
 # SMART ENGINE
 # ---------------------------
 def smart_recommendation(user_id, title, genre):
-    similar = get_similar_movies(title)
+    # 🔥 1. AI recommendations (BERT)
+    ai_titles = ai_recommend(title)
+
+    ai_movies = []
+    for t in ai_titles:
+        enriched = enrich_movie(t)
+        if enriched:
+            ai_movies.append(enriched)
+
+    # 🔥 2. TMDb fallback / diversity
     genre_movies = get_recommendations(genre)
+    similar_movies = get_similar_movies(title)
 
-    combined = similar + genre_movies
+    # 🔥 3. Combine all
+    combined = ai_movies + similar_movies + genre_movies
 
-    # remove duplicates
+    # 🔥 4. Remove duplicates
     seen = set()
     result = []
 

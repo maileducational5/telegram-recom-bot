@@ -2,3 +2,8 @@ pyTelegramBotAPI
 requests 
 python-dotenv 
 flask
+pandas 
+scikit-learn 
+sentence-transformers 
+numpy
+faiss-cpu

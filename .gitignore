@@ -1,0 +1,118 @@
+# =========================
+# PYTHON
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# =========================
+# VIRTUAL ENV
+# =========================
+venv/
+env/
+ENV/
+.venv/
+
+# =========================
+# ENV / SECRETS
+# =========================
+.env
+config.py
+*.env
+
+# =========================
+# API KEYS (IMPORTANT)
+# =========================
+# Make sure config.py is NOT pushed if it contains:
+# OMDB_API_KEY, TMDB_API_KEY, BOT_TOKEN
+
+# =========================
+# LOG FILES
+# =========================
+*.log
+
+# =========================
+# DATASETS
+# =========================
+data/
+datasets/
+*.csv
+*.json
+*.zip
+*.tar.gz
+
+# =========================
+# ML MODELS
+# =========================
+models/
+*.pt
+*.pth
+*.h5
+*.pkl
+*.joblib
+
+# =========================
+# NOTEBOOKS
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# CACHE
+# =========================
+.cache/
+*.cache
+
+# =========================
+# OS FILES
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# IDE / EDITOR
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# BUILD FILES
+# =========================
+dist/
+build/
+*.egg-info/
+
+# =========================
+# DOCKER (if used later)
+# =========================
+docker-compose.override.yml
+
+# =========================
+# TEST OUTPUT
+# =========================
+htmlcov/
+.coverage
+.pytest_cache/
+
+# =========================
+# TEMP FILES
+# =========================
+tmp/
+temp/
+
+# =========================
+# TELEGRAM SESSION / CACHE
+# =========================
+*.session
+*.session-journal
+
+# =========================
+# AI EMBEDDINGS CACHE
+# =========================
+embeddings/
+vector_store/
+faiss_index/
