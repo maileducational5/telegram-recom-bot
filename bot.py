@@ -1,5 +1,4 @@
 #bot.py
-
 import telebot
 from config import BOT_TOKEN, DEVELOPER_ID
 from utils import search_movie
