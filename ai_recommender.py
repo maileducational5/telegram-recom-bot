@@ -1,40 +1,69 @@
+#ai_recommender.py
 import numpy as np
+import random
 import pickle
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Load saved data
+# ---------------------------
+# LOAD MODEL
+# ---------------------------
+model = SentenceTransformer('all-MiniLM-L6-v2')
+
+# ---------------------------
+# LOAD PRETRAINED DATA
+# ---------------------------
 embeddings = np.load("embeddings.npy")
 
 with open("titles.pkl", "rb") as f:
     titles = pickle.load(f)
 
-# Load model
-model = SentenceTransformer('all-MiniLM-L6-v2')
+# ---------------------------
+# RECOMMEND FUNCTION
+# ---------------------------
+def recommend(query_text, top_k=5):
+    try:
+        # Encode query
+        query_vec = model.encode([query_text])
 
+        # Similarity
+        scores = cosine_similarity(query_vec, embeddings)[0]
 
-# def recommend(movie_name, top_n=5):
-#     if movie_name not in titles:
-#         return []
+        # Sort indices
+        sorted_idx = np.argsort(scores)[::-1]
 
-#     idx = titles.index(movie_name)
+        # 🔥 Multi-level diversity (VERY IMPORTANT)
+        strong = sorted_idx[:10]
+        medium = sorted_idx[10:30]
+        weak = sorted_idx[30:60]
 
-#     query_embedding = embeddings[idx].reshape(1, -1)
+        picks = []
 
-#     similarity = cosine_similarity(query_embedding, embeddings)[0]
+        if len(strong) >= 2:
+            picks += random.sample(list(strong), 2)
 
-#     # Get top similar indices
-#     top_indices = similarity.argsort()[::-1][1:top_n+1]
+        if len(medium) >= 2:
+            picks += random.sample(list(medium), 2)
 
-#     results = [titles[i] for i in top_indices]
+        if len(weak) >= 1:
+            picks += random.sample(list(weak), 1)
 
-#     return results
+        random.shuffle(picks)
 
-def recommend(movie_name, top_n=5):
-    query_embedding = model.encode([movie_name])
+        results = []
 
-    similarity = cosine_similarity(query_embedding, embeddings)[0]
+        for i in picks:
+            title = titles[i]
 
-    top_indices = similarity.argsort()[::-1][:top_n]
+            # avoid same movie
+            if title.lower() != query_text.lower():
+                results.append(title)
 
-    return [titles[i] for i in top_indices]
+            if len(results) >= top_k:
+                break
+
+        return results
+
+    except Exception as e:
+        print("AI ERROR:", e)
+        return []

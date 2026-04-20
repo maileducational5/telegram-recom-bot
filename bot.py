@@ -1,123 +1,88 @@
 import telebot
 from config import BOT_TOKEN
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-from utils import (
-    search_movie,
-    smart_recommendation
-)
+from utils import search_movie, smart_recommendation
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# 🔥 USER DATA STORAGE
 user_history = {}
 last_movie = {}
 
-# ---------------------------
-# TRACK USER PREFERENCES
-# ---------------------------
+
 def track_user(user_id, genre):
-    if user_id not in user_history:
-        user_history[user_id] = {}
-
-    if genre not in user_history[user_id]:
-        user_history[user_id][genre] = 0
-
-    user_history[user_id][genre] += 1
+    user_history.setdefault(user_id, {})
+    user_history[user_id][genre] = user_history[user_id].get(genre, 0) + 1
 
 
-def get_favorite_genre(user_id):
-    if user_id not in user_history:
-        return None
-    return max(user_history[user_id], key=user_history[user_id].get)
-
-
-# ---------------------------
-# START COMMAND
-# ---------------------------
 @bot.message_handler(commands=['start'])
 def start(message):
     bot.reply_to(message, "🎬 Send me a movie name!")
 
 
-# ---------------------------
-# SEARCH MOVIE
-# ---------------------------
 @bot.message_handler(func=lambda msg: True)
 def handle_message(message):
-    movie_name = message.text
+    try:
+        data = search_movie(message.text)
 
-    data = search_movie(movie_name)
+        if not data or data.get("Response") == "False":
+            bot.reply_to(message, "❌ Movie not found")
+            return
 
-    if data.get("Response") == "False":
-        bot.reply_to(message, "❌ Movie not found")
-        return
+        last_movie[message.from_user.id] = data['Title']
 
-    # 🔥 STORE LAST MOVIE
-    last_movie[message.from_user.id] = data['Title']
+        genres = data['Genre'].split(", ")
 
-    genres = data['Genre'].split(", ")
+        markup = InlineKeyboardMarkup()
+        for g in genres:
+            markup.add(InlineKeyboardButton(g, callback_data=f"genre:{g}"))
 
-    markup = InlineKeyboardMarkup()
-    for genre in genres:
-        markup.add(
-            InlineKeyboardButton(
-                genre,
-                callback_data=f"genre:{genre}"
-            )
-        )
-
-    msg = f"""
+        msg = f"""
 🎬 {data['Title']} ({data['Year']})
-
 ⭐ IMDb: {data['imdbRating']}
-🎭 Genre: {data['Genre']}
-🎬 Director: {data['Director']}
-👥 Cast: {data['Actors']}
-
+🎭 {data['Genre']}
 📝 {data['Plot']}
 """
 
-    bot.send_message(message.chat.id, msg, reply_markup=markup)
+        bot.send_message(message.chat.id, msg, reply_markup=markup)
+
+    except Exception as e:
+        print("BOT ERROR:", e)
+        bot.reply_to(message, "⚠️ Something went wrong. Try again.")
 
 
-# ---------------------------
-# HANDLE GENRE CLICK
-# ---------------------------
 @bot.callback_query_handler(func=lambda call: call.data.startswith("genre:"))
 def handle_genre(call):
-    bot.answer_callback_query(call.id)
+    try:
+        bot.answer_callback_query(call.id)
 
-    user_id = call.from_user.id
-    genre = call.data.split(":")[1]
+        user_id = call.from_user.id
+        genre = call.data.split(":")[1]
 
-    # 🔥 TRACK USER INTEREST
-    track_user(user_id, genre)
+        track_user(user_id, genre)
 
-    movie_name = last_movie.get(user_id)
+        movie = last_movie.get(user_id)
 
-    if not movie_name:
-        bot.send_message(call.message.chat.id, "❌ Search a movie first")
-        return
+        if not movie:
+            bot.send_message(call.message.chat.id, "❌ Search first")
+            return
 
-    # 🔥 SMART RECOMMENDATION
-    movies = smart_recommendation(user_id, movie_name, genre)
+        movies = smart_recommendation(user_id, movie, genre)
 
-    if not movies:
-        bot.send_message(call.message.chat.id, f"❌ No {genre} movies found")
-        return
+        if not movies:
+            bot.send_message(call.message.chat.id, "⚠️ No recommendations found")
+            return
 
-    for m in movies:
-        msg = f"""
-🎬 {m['title']}
-⭐ Rating: {m['rating']}
-"""
+        for m in movies:
+            bot.send_photo(
+                call.message.chat.id,
+                m['poster'],
+                caption=f"🎬 {m['title']}\n⭐ {m['rating']}"
+            )
 
-        bot.send_photo(
-            call.message.chat.id,
-            m['poster'],
-            caption=msg
-        )
+    except Exception as e:
+        print("CALLBACK ERROR:", e)
+        bot.send_message(call.message.chat.id, "⚠️ Error loading recommendations")
 
 
-bot.polling()
+# 🔥 NEVER STOP BOT
+bot.polling(non_stop=True, interval=0)

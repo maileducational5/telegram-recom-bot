@@ -1,28 +1,61 @@
 import pandas as pd
 import numpy as np
 from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
 import pickle
+import json
 
-# Load dataset
+# ---------------------------
+# LOAD DATASET
+# ---------------------------
 df = pd.read_csv("tmdb_5000_movies.csv")
 
-# Clean data
-df['combined'] = df['title'] + " " + df['overview']
-texts = df['combined'].fillna("")
+# ---------------------------
+# CLEAN GENRES
+# ---------------------------
+def extract_genres(x):
+    try:
+        genres = json.loads(x)
+        return " ".join([g['name'] for g in genres])
+    except:
+        return ""
 
-# Load BERT model
-model = SentenceTransformer('all-MiniLM-L6-v2')
+df['genres_text'] = df['genres'].apply(extract_genres)
+
+# ---------------------------
+# COMBINE FEATURES
+# ---------------------------
+df['combined'] = (
+    df['title'].fillna('') + " " +
+    df['overview'].fillna('') + " " +
+    df['genres_text']
+)
+
+texts = df['combined'].fillna('')
+
+# ---------------------------
+# LOAD BERT MODEL (CPU SAFE)
+# ---------------------------
+model = SentenceTransformer(
+    'all-MiniLM-L6-v2',
+    device='cpu'   # 🔥 avoids CUDA issue
+)
 
 print("Encoding movies... (first time takes time)")
 
-# Convert text → embeddings
-embeddings = model.encode(texts.tolist(), show_progress_bar=True)
+# ---------------------------
+# CREATE EMBEDDINGS
+# ---------------------------
+embeddings = model.encode(
+    texts.tolist(),
+    show_progress_bar=True,
+    batch_size=64
+)
 
-# Save embeddings
+# ---------------------------
+# SAVE FILES
+# ---------------------------
 np.save("embeddings.npy", embeddings)
 
-# Save titles
 with open("titles.pkl", "wb") as f:
     pickle.dump(df['title'].tolist(), f)
 
