@@ -1,0 +1,10 @@
+#config.py
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+OMDB_API_KEY = os.getenv("OMDB_API_KEY")
+DEVELOPER_ID = int(os.getenv("DEVELOPER_ID"))
